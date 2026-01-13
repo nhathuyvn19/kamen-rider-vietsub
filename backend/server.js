@@ -37,11 +37,14 @@ app.get('/test', (req, res) => {
 });
 
 // Upload endpoint (simplified - just creates a job)
-app.post('/api/upload', express.raw({ type: '*/*', limit: '500mb' }), (req, res) => {
+app.post('/api/upload', (req, res) => {
   try {
-    const jobId = Date.now().toString(36);
+    console.log('Upload requested');
+    console.log('Headers:', req.headers);
+    console.log('Body type:', typeof req.body);
 
-    console.log(`[${jobId}] Upload requested`);
+    const jobId = Date.now().toString(36);
+    console.log(`[${jobId}] Creating job`);
 
     // Create job status
     jobStatuses.set(jobId, {
@@ -73,6 +76,7 @@ app.post('/api/upload', express.raw({ type: '*/*', limit: '500mb' }), (req, res)
       }
     }, 1000);
 
+    console.log(`[${jobId}] Job started, returning response`);
     res.json({
       jobId,
       message: 'Upload successful',
