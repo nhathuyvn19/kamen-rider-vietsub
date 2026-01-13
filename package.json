@@ -1,0 +1,25 @@
+{
+  "name": "kamen-rider-subtitle",
+  "version": "1.0.0",
+  "description": "Tự động thêm vietsub vào phim Kamen Rider",
+  "scripts": {
+    "setup": "cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "cd backend && npm install",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "kamen-rider",
+    "vietsub",
+    "subtitle",
+    "whisper",
+    "translation"
+  ],
+  "author": "",
+  "license": "MIT"
+}

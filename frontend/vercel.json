@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "build",
+  "installCommand": "npm install",
+  "framework": "create-react-app",
+  "env": {
+    "REACT_APP_API_URL": {
+      "value": "your_backend_url"
+    }
+  }
+}
