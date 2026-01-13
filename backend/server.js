@@ -262,6 +262,12 @@ async function uploadToCloudinary(videoPath, publicId) {
   });
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Health check: http://0.0.0.0:${PORT}/health`);
+});
+
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
