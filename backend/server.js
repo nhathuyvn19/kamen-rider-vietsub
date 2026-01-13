@@ -1,8 +1,17 @@
 const express = require('express');
 const cors = require('cors');
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // Enable CORS for all origins
 app.use(cors({
@@ -12,6 +21,15 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 500 * 1024 * 1024 // 500MB
+  }
+});
 
 // Simple in-memory storage
 const jobStatuses = new Map();
@@ -36,52 +54,89 @@ app.get('/test', (req, res) => {
   res.json({ message: 'API is working!' });
 });
 
-// Upload endpoint (simplified - just creates a job)
-app.post('/api/upload', (req, res) => {
+// Upload endpoint
+app.post('/api/upload', upload.single('video'), async (req, res) => {
   try {
     console.log('Upload requested');
-    console.log('Headers:', req.headers);
-    console.log('Body type:', typeof req.body);
+    console.log('File:', req.file);
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
 
     const jobId = Date.now().toString(36);
-    console.log(`[${jobId}] Creating job`);
+    console.log(`[${jobId}] Creating job for: ${req.file.originalname}`);
 
     // Create job status
     jobStatuses.set(jobId, {
       status: 'processing',
       progress: 10,
-      message: 'Job created successfully'
+      message: 'Uploading to Cloudinary...'
     });
 
-    // Simulate processing
-    let progress = 10;
-    const interval = setInterval(() => {
-      progress += 10;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        jobStatuses.set(jobId, {
-          status: 'completed',
-          progress: 100,
-          videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-          message: 'Processing completed (simulated)'
-        });
-        console.log(`[${jobId}] Job completed`);
-      } else {
-        jobStatuses.set(jobId, {
-          status: 'processing',
-          progress,
-          message: `Processing... ${progress}%`
-        });
-      }
-    }, 1000);
+    // Upload to Cloudinary
+    try {
+      const result = await cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'video',
+          public_id: `kamen-rider-${jobId}`,
+          folder: 'kamen-rider-uploads',
+          chunk_size: 6000000
+        }
+      );
 
-    console.log(`[${jobId}] Job started, returning response`);
-    res.json({
-      jobId,
-      message: 'Upload successful',
-      status: 'processing'
-    });
+      // Create stream from buffer
+      const uploadPromise = new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: 'video',
+            public_id: `kamen-rider-${jobId}`,
+            folder: 'kamen-rider-uploads',
+            chunk_size: 6000000
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          }
+        );
+
+        uploadStream.end(req.file.buffer);
+      });
+
+      const cloudinaryResult = await uploadPromise;
+      console.log(`[${jobId}] Uploaded to Cloudinary: ${cloudinaryResult.secure_url}`);
+
+      // Update job status to completed
+      jobStatuses.set(jobId, {
+        status: 'completed',
+        progress: 100,
+        videoUrl: cloudinaryResult.secure_url,
+        message: 'Video uploaded successfully!'
+      });
+
+      console.log(`[${jobId}] Job completed`);
+
+      res.json({
+        jobId,
+        message: 'Upload successful',
+        status: 'processing',
+        videoUrl: cloudinaryResult.secure_url
+      });
+
+    } catch (cloudinaryError) {
+      console.error(`[${jobId}] Cloudinary upload error:`, cloudinaryError);
+      jobStatuses.set(jobId, {
+        status: 'error',
+        progress: 0,
+        error: cloudinaryError.message,
+        message: 'Upload failed'
+      });
+
+      res.status(500).json({ error: 'Failed to upload to Cloudinary' });
+    }
 
   } catch (error) {
     console.error('Upload error:', error);
