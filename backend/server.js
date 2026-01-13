@@ -23,26 +23,10 @@ if (!fs.existsSync(outputsDir)) {
   fs.mkdirSync(outputsDir, { recursive: true });
 }
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'https://kamen-rider-vietsub.vercel.app',
-      'http://localhost:3000',
-      'http://localhost:5000'
-    ];
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-};
-
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json());
+
+const jobStatuses = new Map();
 
 const upload = multer({
   dest: 'uploads/',
@@ -96,16 +80,14 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 app.get('/api/status/:jobId', (req, res) => {
   try {
     const { jobId } = req.params;
-    const statusFile = `outputs/${jobId}/status.json`;
-
     console.log(`Checking status for job: ${jobId}`);
 
-    if (!fs.existsSync(statusFile)) {
-      console.log(`Status file not found: ${statusFile}`);
+    if (!jobStatuses.has(jobId)) {
+      console.log(`Job not found in memory: ${jobId}`);
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    const status = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+    const status = jobStatuses.get(jobId);
     console.log(`Status for job ${jobId}:`, status);
     res.json(status);
   } catch (error) {
@@ -116,48 +98,56 @@ app.get('/api/status/:jobId', (req, res) => {
 
 async function processVideo(videoPath, outputDir, jobId) {
   const updateStatus = (status, progress = 0, videoUrl = null) => {
-    fs.writeFileSync(
-      `${outputDir}/status.json`,
-      JSON.stringify({ status, progress, videoUrl })
-    );
+    jobStatuses.set(jobId, { status, progress, videoUrl });
   };
 
   try {
-    updateStatus('transcribing', 10);
+    updateStatus('processing', 10);
+    console.log(`[${jobId}] Starting video processing`);
 
     const audioPath = `${outputDir}/audio.wav`;
     await extractAudio(videoPath, audioPath);
+    console.log(`[${jobId}] Audio extracted`);
 
-    updateStatus('transcribing', 30);
+    updateStatus('processing', 30);
 
     const srtPath = `${outputDir}/subtitle_ja.srt`;
     await transcribeAudio(audioPath, srtPath);
+    console.log(`[${jobId}] Transcription complete`);
 
-    updateStatus('translating', 50);
+    updateStatus('processing', 50);
 
     const viSrtPath = `${outputDir}/subtitle_vi.srt`;
     await translateSubtitle(srtPath, viSrtPath);
+    console.log(`[${jobId}] Translation complete`);
 
-    updateStatus('embedding', 70);
+    updateStatus('processing', 70);
 
     const outputVideoPath = `${outputDir}/video_with_sub.mp4`;
     await embedSubtitle(videoPath, viSrtPath, outputVideoPath);
+    console.log(`[${jobId}] Subtitle embedded`);
 
-    updateStatus('uploading', 90);
+    updateStatus('processing', 90);
 
     const videoUrl = await uploadToCloudinary(outputVideoPath, `kamen-rider-${jobId}`);
+    console.log(`[${jobId}] Video uploaded: ${videoUrl}`);
 
     updateStatus('completed', 100, videoUrl);
+    console.log(`[${jobId}] Job completed successfully`);
 
-    fs.unlinkSync(videoPath);
-    fs.unlinkSync(audioPath);
-    fs.unlinkSync(srtPath);
-    fs.unlinkSync(viSrtPath);
-    fs.unlinkSync(outputVideoPath);
+    try {
+      fs.unlinkSync(videoPath);
+      fs.unlinkSync(audioPath);
+      fs.unlinkSync(srtPath);
+      fs.unlinkSync(viSrtPath);
+      fs.unlinkSync(outputVideoPath);
+    } catch (cleanupError) {
+      console.error(`[${jobId}] Cleanup error:`, cleanupError);
+    }
 
   } catch (error) {
-    console.error('Processing error:', error);
-    updateStatus('error', 0);
+    console.error(`[${jobId}] Processing error:`, error);
+    jobStatuses.set(jobId, { status: 'error', error: error.message, progress: 0 });
   }
 }
 
