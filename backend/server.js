@@ -12,6 +12,17 @@ const { spawn } = require('child_process');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const uploadsDir = 'uploads';
+const outputsDir = 'outputs';
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+if (!fs.existsSync(outputsDir)) {
+  fs.mkdirSync(outputsDir, { recursive: true });
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -65,15 +76,24 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 });
 
 app.get('/api/status/:jobId', (req, res) => {
-  const { jobId } = req.params;
-  const statusFile = `outputs/${jobId}/status.json`;
+  try {
+    const { jobId } = req.params;
+    const statusFile = `outputs/${jobId}/status.json`;
 
-  if (!fs.existsSync(statusFile)) {
-    return res.status(404).json({ error: 'Job not found' });
+    console.log(`Checking status for job: ${jobId}`);
+
+    if (!fs.existsSync(statusFile)) {
+      console.log(`Status file not found: ${statusFile}`);
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    const status = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+    console.log(`Status for job ${jobId}:`, status);
+    res.json(status);
+  } catch (error) {
+    console.error('Error checking job status:', error);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
-
-  const status = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
-  res.json(status);
 });
 
 async function processVideo(videoPath, outputDir, jobId) {
