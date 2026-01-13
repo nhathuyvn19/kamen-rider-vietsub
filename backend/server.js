@@ -23,6 +23,16 @@ const upload = multer({
   }
 });
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log('\n=== NEW REQUEST ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Headers:', JSON.stringify(req.headers));
+  console.log('====================\n');
+  next();
+});
+
 // In-memory storage
 const jobStatuses = new Map();
 const uploadedVideos = new Map();
@@ -50,15 +60,21 @@ app.get('/test', (req, res) => {
 // Upload endpoint - receive file and store info
 app.post('/api/upload', upload.single('video'), (req, res) => {
   try {
-    console.log('Upload requested');
-    console.log('File:', req.file ? req.file.originalname : 'No file');
+    console.log('\n=== UPLOAD REQUEST STARTED ===');
+    console.log('Has file:', !!req.file);
 
-    if (!req.file) {
+    if (req.file) {
+      console.log('File info:');
+      console.log('  - Filename:', req.file.originalname);
+      console.log('  - Size:', req.file.size, 'bytes');
+      console.log('  - Mimetype:', req.file.mimetype);
+    } else {
+      console.log('ERROR: No file in request!');
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     const jobId = Date.now().toString(36);
-    console.log(`[${jobId}] Creating job for: ${req.file.originalname}`);
+    console.log(`\n[${jobId}] Creating job for: ${req.file.originalname}`);
 
     // Store video info
     uploadedVideos.set(jobId, {
@@ -74,10 +90,13 @@ app.post('/api/upload', upload.single('video'), (req, res) => {
       message: 'Processing video...'
     });
 
+    console.log(`[${jobId}] Job created, starting interval`);
+
     // Simulate processing (10 seconds)
     let progress = 10;
     const interval = setInterval(() => {
       progress += 10;
+      console.log(`[${jobId}] Progress: ${progress}%`);
       if (progress >= 100) {
         progress = 100;
         clearInterval(interval);
@@ -89,6 +108,7 @@ app.post('/api/upload', upload.single('video'), (req, res) => {
           message: 'Processing completed (simulated)'
         });
         console.log(`[${jobId}] Job completed`);
+        console.log('=== UPLOAD REQUEST COMPLETED ===\n');
       } else {
         jobStatuses.set(jobId, {
           status: 'processing',
@@ -98,7 +118,7 @@ app.post('/api/upload', upload.single('video'), (req, res) => {
       }
     }, 1000);
 
-    console.log(`[${jobId}] Job started, returning response`);
+    console.log(`[${jobId}] Sending response to client`);
     res.json({
       jobId,
       message: 'Upload successful',
@@ -108,7 +128,10 @@ app.post('/api/upload', upload.single('video'), (req, res) => {
     });
 
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('\n=== UPLOAD ERROR ===');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    console.error('====================\n');
     res.status(500).json({ error: error.message });
   }
 });
