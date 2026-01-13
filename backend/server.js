@@ -49,6 +49,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/test-job', (req, res) => {
+  const testJobId = uuidv4();
+  jobStatuses.set(testJobId, {
+    status: 'test',
+    progress: 50,
+    message: 'This is a test job'
+  });
+  res.json({ jobId: testJobId, message: 'Test job created' });
+});
+
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   try {
     if (!req.file) {
