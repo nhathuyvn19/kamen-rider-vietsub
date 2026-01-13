@@ -63,7 +63,7 @@ app.post('/api/upload', (req, res) => {
         jobStatuses.set(jobId, {
           status: 'completed',
           progress: 100,
-          videoUrl: 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
+          videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
           message: 'Processing completed (simulated)'
         });
         console.log(`[${jobId}] Job completed`);
