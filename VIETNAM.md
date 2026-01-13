@@ -61,6 +61,9 @@ Nếu bảo nhập username/password, hãy dùng:
 
 ### Bước 3: Deploy Backend lên Render (15 phút)
 
+⚠️ **KHÔNG HIỂU CÁCH LÀM?** Xem file `HUONG_DAN_CHI_TIET.md` - có hướng dẫn từng bức hình!
+
+**Tóm tắt nhanh:**
 1. Đăng nhập: https://dashboard.render.com
 2. Click **"+ New"** → **"Web Service"**
 3. Click **"Connect GitHub"**
@@ -96,6 +99,9 @@ PORT = 5000
 
 ### Bước 4: Deploy Frontend lên Vercel (10 phút)
 
+⚠️ **KHÔNG HIỂU CÁCH LÀM?** Xem file `HUONG_DAN_CHI_TIET.md` - có hướng dẫn từng bức hình!
+
+**Tóm tắt nhanh:**
 1. Đăng nhập: https://vercel.com/dashboard
 2. Click **"Add New"** → **"Project"**
 3. Import GitHub repository `kamen-rider-vietsub`
@@ -129,6 +135,7 @@ REACT_APP_API_URL = https://kamen-rider-backend.onrender.com
 
 ## 📚 Tài liệu chi tiết:
 
+- **📖 Hướng dẫn từng bước có hình**: Xem file `HUONG_DAN_CHI_TIET.md` (NÊN ĐỌC KHI KHÔNG HIỂU!)
 - **Deploy chi tiết**: Xem file `README.md`
 - **Test local trước**: Xem file `SETUP_LOCAL.md`
 - **Cài đặt Whisper**: Xem file `WHISPER_INSTALL.md`
