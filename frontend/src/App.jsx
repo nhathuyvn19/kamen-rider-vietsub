@@ -74,8 +74,8 @@ function App() {
 
       setStatus(data);
 
-      if (data.status === 'completed' && data.videoUrl) {
-        setVideoUrl(data.videoUrl);
+      if (data.status === 'completed' && data.videoInfo) {
+        setError(null);
         setUploading(false);
         clearInterval(intervalRef.current);
       } else if (data.status === 'error') {
@@ -176,15 +176,29 @@ function App() {
           </div>
         )}
 
-        {videoUrl && (
+        {status?.status === 'completed' && status?.videoInfo && (
           <div className="video-section">
             <div className="video-player">
-              <video
-                src={videoUrl}
-                controls
-                className="video-element"
-                preload="metadata"
-              />
+              <div style={{
+                padding: '40px',
+                background: '#000',
+                color: '#fff',
+                textAlign: 'center',
+                borderRadius: '15px'
+              }}>
+                <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🎬</div>
+                <h3 style={{ marginBottom: '20px' }}>Upload Thành Công!</h3>
+                <p style={{ marginBottom: '10px' }}>Tên file: {status.videoInfo.filename}</p>
+                <p style={{ marginBottom: '10px' }}>
+                  Kích thước: {(status.videoInfo.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+                <p style={{ marginBottom: '20px' }}>
+                  Định dạng: {status.videoInfo.mimetype}
+                </p>
+                <p style={{ color: '#ffd700', marginBottom: '20px' }}>
+                  ✅ Video đã được nhận diện!
+                </p>
+              </div>
             </div>
             <div className="video-actions">
               <button onClick={resetUpload} className="reset-button">
